@@ -1,575 +1,957 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Symbiotic Expansion</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Symbiotic Expansion - Network Defense Game</title>
   <style>
-    :root{
-      --neon: #00ff88;
-      --neon-2: #6ef0ff;
-      --bg1: #061213;
-      --muted: #bfeee0;
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
     }
-    html,body{height:100%;margin:0;background:radial-gradient(circle at 20% 20%, rgba(0,255,136,0.06), transparent 25%), linear-gradient(180deg,#001616,#021212);font-family:Inter,system-ui,Arial;color:var(--muted);-webkit-font-smoothing:antialiased}
-    .wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px}
-    .topbar{width:100%;max-width:1180px;display:flex;justify-content:space-between;align-items:center;gap:12px}
-    .branding{display:flex;flex-direction:column}
-    .title{font-size:20px;font-weight:900;color:var(--neon);letter-spacing:.4px}
-    .subtitle{font-size:12px;color:#9fd9c0}
-    .controls{display:flex;gap:8px;align-items:center}
-    .controls input{padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:var(--muted);min-width:160px}
-    .controls button{padding:8px 12px;border-radius:10px;border:none;background:var(--neon);color:#012;font-weight:800;cursor:pointer}
-    .main{width:100%;max-width:1180px;display:flex;gap:18px;align-items:flex-start;justify-content:center}
-    .board{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:12px;border:1px solid rgba(0,255,136,0.04);box-shadow:0 20px 60px rgba(0,0,0,0.6)}
-    #canvasWrap{position:relative;width:78vw;max-width:820px;aspect-ratio:16/10}
-    canvas#game{width:100%;height:100%;display:block;border-radius:10px;background:linear-gradient(180deg,#061617,#02100f)}
-    .hud{width:280px;padding:12px;border-radius:12px;background:linear-gradient(180deg, rgba(0,0,0,0.2), rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.02)}
-    .hud h3{margin:0;color:var(--neon);font-size:18px}
-    .row{display:flex;justify-content:space-between;align-items:center;margin-top:10px}
-    .muted{font-size:13px;color:#9fd9c0}
-    .big{font-weight:800;color:var(--neon-2)}
-    .btn{padding:8px 12px;border-radius:10px;border:none;background:var(--neon);color:#012;font-weight:800;cursor:pointer}
-    .note{font-size:12px;color:#9fbfb0;margin-top:10px}
-    .overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:60;background:linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.85))}
-    .panel{background:linear-gradient(180deg,#071617,#021010);padding:20px;border-radius:12px;border:1px solid rgba(255,255,255,0.03);min-width:320px;text-align:center}
-    .panel h2{color:var(--neon);margin:0 0 8px}
-    .panel p{color:var(--muted);margin:0 0 12px}
-    @media(max-width:900px){ .main{flex-direction:column;align-items:center} .hud{width:92%} #canvasWrap{width:92vw} .topbar{flex-direction:column;align-items:flex-start} }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #000;
+      color: #00ff88;
+      overflow-x: hidden;
+      min-height: 100vh;
+      position: relative;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: 
+        radial-gradient(circle at 20% 30%, rgba(0, 255, 136, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(110, 240, 255, 0.06) 0%, transparent 50%),
+        linear-gradient(180deg, #001a0d 0%, #000 100%);
+      z-index: -1;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    /* Header Styles */
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+      padding: 30px 20px;
+      background: linear-gradient(135deg, rgba(0, 255, 136, 0.05), rgba(0, 255, 136, 0.02));
+      border-radius: 20px;
+      border: 2px solid rgba(0, 255, 136, 0.2);
+      box-shadow: 0 0 40px rgba(0, 255, 136, 0.1);
+      animation: fadeIn 0.6s ease-out;
+    }
+
+    .header h1 {
+      font-size: 3em;
+      font-weight: 900;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      background: linear-gradient(135deg, #00ff88, #6ef0ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-shadow: 0 0 30px rgba(0, 255, 136, 0.5);
+      margin-bottom: 10px;
+      animation: glow 2s ease-in-out infinite alternate;
+    }
+
+    .header p {
+      font-size: 1.1em;
+      color: #5fc99d;
+      letter-spacing: 1px;
+    }
+
+    /* Controls Bar */
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 25px;
+      padding: 20px;
+      background: rgba(0, 26, 13, 0.6);
+      border-radius: 15px;
+      border: 1px solid rgba(0, 255, 136, 0.15);
+      flex-wrap: wrap;
+      backdrop-filter: blur(10px);
+    }
+
+    .controls-left {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .controls-right {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    input {
+      padding: 12px 16px;
+      background: rgba(0, 0, 0, 0.6);
+      border: 2px solid rgba(0, 255, 136, 0.3);
+      border-radius: 10px;
+      color: #00ff88;
+      font-size: 14px;
+      outline: none;
+      transition: all 0.3s;
+      min-width: 180px;
+    }
+
+    input:focus {
+      border-color: #00ff88;
+      box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
+    }
+
+    button {
+      padding: 12px 24px;
+      background: linear-gradient(135deg, #00ff88, #00cc6f);
+      border: none;
+      border-radius: 10px;
+      color: #001a0d;
+      font-weight: 800;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      box-shadow: 0 4px 15px rgba(0, 255, 136, 0.3);
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 25px rgba(0, 255, 136, 0.5);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    button.secondary {
+      background: transparent;
+      border: 2px solid #00ff88;
+      color: #00ff88;
+      box-shadow: 0 0 15px rgba(0, 255, 136, 0.2);
+    }
+
+    button.secondary:hover {
+      background: rgba(0, 255, 136, 0.1);
+    }
+
+    /* Game Layout */
+    .game-layout {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 25px;
+      animation: fadeIn 0.8s ease-out 0.2s backwards;
+    }
+
+    /* Canvas Container */
+    .canvas-container {
+      position: relative;
+      background: linear-gradient(135deg, rgba(0, 26, 13, 0.4), rgba(0, 13, 26, 0.4));
+      border-radius: 20px;
+      padding: 20px;
+      border: 2px solid rgba(0, 255, 136, 0.2);
+      box-shadow: 
+        0 0 40px rgba(0, 255, 136, 0.15),
+        inset 0 0 60px rgba(0, 0, 0, 0.5);
+    }
+
+    canvas {
+      width: 100%;
+      height: 600px;
+      border-radius: 15px;
+      background: linear-gradient(135deg, #001a0d, #000d1a);
+      box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.8);
+      cursor: crosshair;
+    }
+
+    /* Stats Panel */
+    .stats-panel {
+      background: linear-gradient(135deg, rgba(0, 26, 13, 0.6), rgba(0, 13, 26, 0.6));
+      border-radius: 20px;
+      padding: 25px;
+      border: 2px solid rgba(0, 255, 136, 0.2);
+      box-shadow: 0 0 30px rgba(0, 255, 136, 0.1);
+      backdrop-filter: blur(10px);
+      height: fit-content;
+    }
+
+    .stats-panel h2 {
+      font-size: 1.5em;
+      margin-bottom: 20px;
+      color: #00ff88;
+      text-align: center;
+      text-shadow: 0 0 15px rgba(0, 255, 136, 0.5);
+    }
+
+    .stat-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px;
+      margin-bottom: 12px;
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 12px;
+      border: 1px solid rgba(0, 255, 136, 0.15);
+      transition: all 0.3s;
+    }
+
+    .stat-item:hover {
+      border-color: rgba(0, 255, 136, 0.4);
+      background: rgba(0, 0, 0, 0.6);
+    }
+
+    .stat-label {
+      color: #5fc99d;
+      font-size: 0.95em;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .stat-value {
+      font-size: 1.8em;
+      font-weight: 900;
+      color: #00ff88;
+      text-shadow: 0 0 10px rgba(0, 255, 136, 0.6);
+    }
+
+    .stat-value.highlight {
+      color: #6ef0ff;
+      text-shadow: 0 0 10px rgba(110, 240, 255, 0.6);
+    }
+
+    /* Instructions */
+    .instructions {
+      margin-top: 20px;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 12px;
+      border: 1px solid rgba(0, 255, 136, 0.15);
+    }
+
+    .instructions h3 {
+      color: #00ff88;
+      margin-bottom: 12px;
+      font-size: 1.1em;
+    }
+
+    .instructions p {
+      color: #5fc99d;
+      font-size: 0.9em;
+      line-height: 1.6;
+      margin-bottom: 8px;
+    }
+
+    .instructions strong {
+      color: #00ff88;
+      font-weight: 800;
+    }
+
+    .color-legend {
+      display: flex;
+      gap: 15px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .legend-color {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      box-shadow: 0 0 10px currentColor;
+    }
+
+    .legend-color.good {
+      background: #00ff88;
+    }
+
+    .legend-color.bad {
+      background: #ff4a4a;
+    }
+
+    /* Modal Overlay */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.9);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal {
+      background: linear-gradient(135deg, rgba(0, 26, 13, 0.95), rgba(0, 13, 26, 0.95));
+      padding: 40px;
+      border-radius: 20px;
+      border: 2px solid rgba(0, 255, 136, 0.4);
+      box-shadow: 0 0 60px rgba(0, 255, 136, 0.3);
+      text-align: center;
+      max-width: 500px;
+      animation: scaleIn 0.4s ease-out;
+    }
+
+    .modal h2 {
+      font-size: 2.5em;
+      color: #00ff88;
+      margin-bottom: 15px;
+      text-shadow: 0 0 20px rgba(0, 255, 136, 0.6);
+    }
+
+    .modal p {
+      font-size: 1.2em;
+      color: #5fc99d;
+      margin-bottom: 10px;
+    }
+
+    .modal .score {
+      font-size: 2em;
+      font-weight: 900;
+      color: #6ef0ff;
+      margin: 20px 0;
+      text-shadow: 0 0 15px rgba(110, 240, 255, 0.6);
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes scaleIn {
+      from {
+        opacity: 0;
+        transform: scale(0.8);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    @keyframes glow {
+      from {
+        filter: drop-shadow(0 0 20px rgba(0, 255, 136, 0.4));
+      }
+      to {
+        filter: drop-shadow(0 0 30px rgba(0, 255, 136, 0.8));
+      }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1200px) {
+      .game-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .stats-panel {
+        max-width: 100%;
+      }
+
+      canvas {
+        height: 500px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .header h1 {
+        font-size: 2em;
+      }
+
+      .controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .controls-left,
+      .controls-right {
+        width: 100%;
+        justify-content: center;
+      }
+
+      input {
+        width: 100%;
+      }
+
+      canvas {
+        height: 400px;
+      }
+    }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="topbar">
-      <div class="branding">
-        <div class="title">Symbiotic Expansion</div>
-        <div class="subtitle">Grow the network — connect modules, avoid corruption</div>
+  <div class="container">
+    <div class="header">
+      <h1>⚡ Symbiotic Expansion ⚡</h1>
+      <p>Defend your network core • Connect modules • Survive the corruption waves</p>
+    </div>
+
+    <div class="controls">
+      <div class="controls-left">
+        <input type="text" id="username" placeholder="Enter your username" />
+        <button onclick="saveUsername()">Save Name</button>
       </div>
-      <div class="controls">
-        <input id="username" placeholder="username (saved locally)" />
-        <button id="saveBtn">Save</button>
-        <button id="startBtn" class="btn">Start</button>
+      <div class="controls-right">
+        <button id="autoConnectBtn" class="secondary" onclick="toggleAutoConnect()">
+          Auto-Connect: OFF
+        </button>
+        <button id="startBtn" onclick="startWave()">Start Game</button>
       </div>
     </div>
 
-    <div class="main">
-      <div class="board">
-        <div id="canvasWrap"><canvas id="game"></canvas></div>
+    <div class="game-layout">
+      <div class="canvas-container">
+        <canvas id="gameCanvas"></canvas>
       </div>
 
-      <div class="hud">
-        <h3 id="playerLabel">Player: —</h3>
-        <div class="row"><div class="muted">XP</div><div id="xp" class="big">0</div></div>
-        <div class="row"><div class="muted">High</div><div id="high" class="big">0</div></div>
-        <div class="row"><div class="muted">Wave</div><div id="wave" class="big">0</div></div>
-        <div class="row"><div class="muted">Health</div><div id="health" class="big">3</div></div>
-
-        <div style="margin-top:12px">
-          <button id="autoConnect" class="btn">Auto-Connect: OFF</button>
+      <div class="stats-panel">
+        <h2>⚡ Stats ⚡</h2>
+        
+        <div class="stat-item">
+          <span class="stat-label">Player</span>
+          <span class="stat-value" id="playerName">—</span>
         </div>
 
-        <div class="note">Move with <b>WASD</b> or <b>arrow keys</b>. Press <b>SPACE</b> or click a module to connect. Green modules = good, Red = corrupted.</div>
+        <div class="stat-item">
+          <span class="stat-label">XP</span>
+          <span class="stat-value highlight" id="xp">0</span>
+        </div>
+
+        <div class="stat-item">
+          <span class="stat-label">High Score</span>
+          <span class="stat-value" id="highScore">0</span>
+        </div>
+
+        <div class="stat-item">
+          <span class="stat-label">Wave</span>
+          <span class="stat-value" id="wave">0</span>
+        </div>
+
+        <div class="instructions">
+          <h3>🎮 Controls</h3>
+          <p><strong>WASD</strong> or <strong>Arrow Keys</strong> - Move your core</p>
+          <p><strong>SPACE</strong> or <strong>Click</strong> - Connect to module</p>
+          
+          <div class="color-legend">
+            <div class="legend-item">
+              <div class="legend-color good"></div>
+              <span>Good Module (+50 XP)</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color bad"></div>
+              <span>Corrupted (-30 XP)</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
-  <div id="gameOver" class="overlay"><div class="panel"><h2>Network Breached</h2><p id="goText">Your core was corrupted.</p><button id="retry" class="btn">Restart</button></div></div>
-  <div id="win" class="overlay"><div class="panel"><h2>System Expanded</h2><p id="winText">You reached the target expansion!</p><button id="playMore" class="btn">Play Again</button></div></div>
+  <!-- Game Over Modal -->
+  <div class="modal-overlay" id="gameOverModal">
+    <div class="modal">
+      <h2>💀 Network Breached</h2>
+      <p>Your core has been corrupted!</p>
+      <div class="score">XP: <span id="finalXP">0</span></div>
+      <p>Wave: <span id="finalWave">0</span></p>
+      <button onclick="resetGame()" style="margin-top: 20px; width: 100%;">
+        🔄 Try Again
+      </button>
+    </div>
+  </div>
 
-<script type="module">
-/* -------------------------
-   Supabase init
-   ------------------------- */
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+  <!-- Supabase Client -->
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
-// Use the jzofw... project (you used earlier)
-const SUPABASE_URL = 'https://jzofwfixzsotrcmrxlsx.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp6b2Z3Zml4enNvdHJjbXJ4bHN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgzMTczODcsImV4cCI6MjA3Mzg5MzM4N30.zgV7-3R0cuopTtw8caZaYnkM5Mxg1bphJzkuvZGuf-8';
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    const SUPABASE_URL = 'https://mapbotiiklwzulbdwnyt.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1hcGJvdGlpa2x3enVsYmR3bnl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk2NDUxMDksImV4cCI6MjA3NTIyMTEwOX0.uh1YxIssy13LsLlA7AOAYsMqNyuzGanPxMMNylWAoRU';
+    
+    window.supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-/* -------------------------
-   DOM refs & canvas sizing
-   ------------------------- */
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
-const usernameEl = document.getElementById('username');
-const saveBtn = document.getElementById('saveBtn');
-const startBtn = document.getElementById('startBtn');
-const autoConnectBtn = document.getElementById('autoConnect');
-const playerLabel = document.getElementById('playerLabel');
-const xpEl = document.getElementById('xp');
-const highEl = document.getElementById('high');
-const waveEl = document.getElementById('wave');
-const healthEl = document.getElementById('health');
-const overlayGameOver = document.getElementById('gameOver');
-const retryBtn = document.getElementById('retry');
-const overlayWin = document.getElementById('win');
-const playMoreBtn = document.getElementById('playMore');
+    // Game State
+    const game = {
+      canvas: null,
+      ctx: null,
+      player: { x: 100, y: 100, r: 14, speed: 240 },
+      modules: [],
+      moduleId: 0,
+      keys: {},
+      running: false,
+      xp: 0,
+      highScore: 0,
+      wave: 0,
+      autoConnect: false,
+      username: localStorage.getItem('symbio_user') || '',
+      spawnTimer: 0,
+      spawnInterval: 900,
+      modulesThisWave: 0,
+      waveTarget: 12,
+      lastTime: performance.now()
+    };
 
-let canvasWrapRect = document.getElementById('canvasWrap').getBoundingClientRect();
-function fitCanvas(){
-  canvasWrapRect = document.getElementById('canvasWrap').getBoundingClientRect();
-  canvas.width = Math.max(640, Math.floor(canvasWrapRect.width));
-  canvas.height = Math.max(400, Math.floor(canvasWrapRect.height));
-}
-window.addEventListener('resize', ()=>{ fitCanvas(); draw(); });
-fitCanvas();
+    const COLORS = {
+      good: '#00ff88',
+      bad: '#ff4a4a',
+      core: '#6ef0ff',
+      bg: '#001a0d'
+    };
 
-/* -------------------------
-   game state
-   ------------------------- */
-let username = localStorage.getItem('symbio_user') || '';
-usernameEl.value = username;
-let xp = 0;
-let high = 0;
-let wave = 0;
-let health = 3;
-let running = false;
-let autoConnect = false;
+    const CONNECT_DIST = 50;
+    const COLLIDE_DIST = 20;
+    const XP_GAIN = 50;
+    const XP_LOSS = 30;
 
-/* player core */
-const player = { x: 100, y: 100, r: 12, speed: 220 };
+    // Initialize
+    window.addEventListener('load', () => {
+      game.canvas = document.getElementById('gameCanvas');
+      game.ctx = game.canvas.getContext('2d');
+      
+      resizeCanvas();
+      window.addEventListener('resize', resizeCanvas);
+      
+      // Load username
+      if (game.username) {
+        document.getElementById('username').value = game.username;
+        document.getElementById('playerName').textContent = game.username;
+        loadHighScore();
+      }
 
-/* modules */
-const modules = []; // {x,y,vx,vy,type: 'good'|'bad', connected:false, id}
-let moduleId = 0;
+      // Input handlers
+      window.addEventListener('keydown', handleKeyDown);
+      window.addEventListener('keyup', handleKeyUp);
+      game.canvas.addEventListener('click', handleCanvasClick);
 
-/* visuals/colors */
-const COLORS = { good:'#00ff88', bad:'#ff4a4a', core:'#6ef0ff', link:'#00ff88' };
+      // Start game loop
+      requestAnimationFrame(gameLoop);
+    });
 
-/* timing & difficulty */
-let lastTime = performance.now();
-let spawnTimer = 0;
-let spawnInterval = 900; // ms
-let modulesThisWave = 0;
-let waveTarget = 12;
+    function resizeCanvas() {
+      const container = game.canvas.parentElement;
+      game.canvas.width = container.clientWidth - 40;
+      game.canvas.height = 600;
+    }
 
-/* mechanics */
-const CONNECT_DIST = 30;    // distance to connect
-const COLLIDE_DIST = 18;    // collision distance (bad modules)
-const XP_GAIN = 50;
-const XP_LOSS = 30;
+    // Save username
+    window.saveUsername = function() {
+      const username = document.getElementById('username').value.trim();
+      if (!username) {
+        alert('Please enter a username!');
+        return;
+      }
+      game.username = username;
+      localStorage.setItem('symbio_user', username);
+      document.getElementById('playerName').textContent = username;
+      loadHighScore();
+    };
 
-/* helper */
-function rand(min,max){ return Math.random()*(max-min)+min; }
-function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+    // Load high score
+    async function loadHighScore() {
+      if (!game.username) return;
+      try {
+        const { data } = await window.supabase
+          .from('symbiotic_scores')
+          .select('xp')
+          .eq('username', game.username)
+          .order('xp', { ascending: false })
+          .limit(1);
 
-/* -------------------------
-   Supabase helpers
-   ------------------------- */
-async function loadHigh(){
-  if (!username) { high = 0; highEl.textContent = '0'; return; }
-  try {
-    const { data, error } = await supabase
-      .from('symbiotic_expansion_scores')
-      .select('xp')
-      .eq('username', username)
-      .order('xp', { ascending:false })
-      .limit(1);
-    if (!error && data && data.length) high = data[0].xp;
-    else high = 0;
-    highEl.textContent = high;
-  } catch(e){
-    console.warn('loadHigh error', e);
-    high = 0;
-    highEl.textContent = high;
-  }
-}
-async function saveIfHigh(){
-  if (!username) return;
-  if (xp <= high) return;
-  try {
-    await supabase.from('symbiotic_expansion_scores').insert([{ username, xp }]);
-    high = xp;
-    highEl.textContent = high;
-  } catch(e){ console.warn('save error', e); }
-}
-
-/* -------------------------
-   spawn logic
-   ------------------------- */
-function startWave(){
-  if (running) return;
-  running = true;
-  wave++;
-  waveEl.textContent = wave;
-  spawnInterval = Math.max(400, 900 - wave*60);
-  modulesThisWave = 0;
-  waveTarget = 10 + Math.floor(wave * 1.4);
-  spawnTimer = 0;
-}
-
-function spawnModule(){
-  // spawn at edges with inward velocity
-  const side = Math.random();
-  let x,y,vx,vy;
-  if (side < 0.25){ // left
-    x = -20; y = rand(40, canvas.height-40); vx = rand(0.4, 1.2); vy = rand(-0.3,0.3);
-  } else if (side < 0.5){ // top
-    x = rand(40, canvas.width-40); y = -20; vx = rand(-0.5,0.5); vy = rand(0.4,1.2);
-  } else if (side < 0.75){ // right
-    x = canvas.width + 20; y = rand(40, canvas.height-40); vx = rand(-1.2,-0.4); vy = rand(-0.3,0.3);
-  } else { // bottom
-    x = rand(40, canvas.width-40); y = canvas.height + 20; vx = rand(-0.5,0.5); vy = rand(-1.2,-0.4);
-  }
-  // type scaling: early waves mostly good, later waves more bads
-  const badChance = clamp(0.08 + wave*0.02 + Math.random()*0.1, 0, 0.6);
-  const type = Math.random() < badChance ? 'bad' : 'good';
-  modules.push({ id: ++moduleId, x, y, vx, vy, type, connected:false });
-  modulesThisWave++;
-}
-
-/* -------------------------
-   input handling
-   ------------------------- */
-const keys = {};
-window.addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; if (e.code === 'Space') connectNearby(); if (e.key === 'Enter') startWave(); });
-window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
-
-canvas.addEventListener('click', (ev)=>{
-  // map click to canvas coords
-  const rect = canvas.getBoundingClientRect();
-  const mx = (ev.clientX - rect.left) * (canvas.width / rect.width);
-  const my = (ev.clientY - rect.top) * (canvas.height / rect.height);
-  // try to connect nearest module
-  let nearest = null, best = 9999;
-  for (const m of modules){
-    const d = Math.hypot(m.x - mx, m.y - my);
-    if (d < best){ best = d; nearest = m; }
-  }
-  if (nearest && best < 70){
-    tryConnect(nearest);
-  } else {
-    // move player instantly toward click (also allow mouse control)
-    player.x = mx; player.y = my;
-  }
-});
-
-/* -------------------------
-   connection & collision
-   ------------------------- */
-function connectNearby(){
-  // attempt connect to nearest within CONNECT_DIST
-  let nearest = null, best = 9999;
-  for (const m of modules){
-    if (m.connected) continue;
-    const d = Math.hypot(m.x - player.x, m.y - player.y);
-    if (d < best){ best = d; nearest = m; }
-  }
-  if (nearest && best <= CONNECT_DIST*2.2){
-    tryConnect(nearest);
-  }
-}
-
-function tryConnect(m){
-  if (m.connected) return;
-  const d = Math.hypot(m.x - player.x, m.y - player.y);
-  // if too far, require click near or autoConnect
-  if (d > CONNECT_DIST*2.2 && !autoConnect) {
-    // play slight deny sound
-    beep(420, 0.06);
-    return;
-  }
-  if (m.type === 'good'){
-    m.connected = true;
-    xp += XP_GAIN;
-    // small visual effect: shrink module
-    // remove after small delay
-    setTimeout(()=> {
-      const idx = modules.findIndex(x=>x.id===m.id);
-      if (idx>=0) modules.splice(idx,1);
-    }, 240);
-    beep(1200, 0.07, 0.05);
-  } else {
-    // corrupted: connecting is risky -> heavy penalty
-    xp -= XP_LOSS;
-    // effect: mark negative and remove
-    setTimeout(()=> {
-      const idx = modules.findIndex(x=>x.id===m.id);
-      if (idx>=0) modules.splice(idx,1);
-    }, 200);
-    beep(220, 0.14, 0.06);
-  }
-  updateHud();
-  // check win/lose
-  if (xp < 0) endGame();
-  if (modulesThisWave >= waveTarget && modules.length === 0) { // wave cleared
-    running = false;
-    startBtn.disabled = false;
-    // small reward for finishing wave
-    xp += 20 + wave*2;
-    updateHud();
-    saveIfHigh();
-  }
-}
-
-/* -------------------------
-   collision when touching bad modules
-   ------------------------- */
-function checkCollision(){
-  for (let i = modules.length-1;i>=0;i--){
-    const m = modules[i];
-    if (m.type === 'bad'){
-      const d = Math.hypot(m.x - player.x, m.y - player.y);
-      if (d < COLLIDE_DIST + player.r){
-        // collision penalty
-        xp -= XP_LOSS;
-        // remove module
-        modules.splice(i,1);
-        beep(240, 0.12, 0.06);
-        updateHud();
-        if (xp < 0) endGame();
+        if (data && data.length > 0) {
+          game.highScore = data[0].xp;
+          document.getElementById('highScore').textContent = game.highScore;
+        }
+      } catch (error) {
+        console.error('Error loading high score:', error);
       }
     }
-  }
-}
 
-/* -------------------------
-   movement & update loop
-   ------------------------- */
-let last = performance.now();
-function loop(now){
-  const dt = (now - last) / 1000; // seconds
-  last = now;
-
-  // move player with keys
-  let vx = 0, vy = 0;
-  if (keys['arrowleft']||keys['a']) vx = -1;
-  if (keys['arrowright']||keys['d']) vx = 1;
-  if (keys['arrowup']||keys['w']) vy = -1;
-  if (keys['arrowdown']||keys['s']) vy = 1;
-  if (vx || vy){
-    const len = Math.hypot(vx,vy) || 1;
-    player.x += (vx/len) * player.speed * dt;
-    player.y += (vy/len) * player.speed * dt;
-    // clamp
-    player.x = clamp(player.x, 20, canvas.width-20);
-    player.y = clamp(player.y, 20, canvas.height-20);
-  }
-
-  // spawn modules if wave running
-  if (running && modulesThisWave < waveTarget){
-    spawnTimer += (now - last);
-    spawnTimer += (now - last); // compensate for request animation timing
-    spawnTimer += (now - last);
-    spawnTimer = spawnTimer; // no-op to avoid linter remove
-    // we'll use time measured via separate variable to avoid drift
-  }
-
-  // simpler spawn tracking using a delta
-  if (running){
-    spawnInterval -= (now - last);
-    // the above logic used wrong variable; rework: use a separate spawnClock.
-  }
-
-  // We'll implement a robust spawn clock below using timestamps:
-  // (handled by spawnClock variable)
-  if (running && performance.now() - spawnClock >= spawnInterval && modulesThisWave < waveTarget){
-    spawnModule();
-    spawnClock = performance.now();
-  }
-
-  // update module positions
-  for (const m of modules){
-    m.x += m.vx * (50 + wave*6) * dt;
-    m.y += m.vy * (50 + wave*4) * dt;
-    // slight wandering
-    m.vx += rand(-0.02,0.02);
-    m.vy += rand(-0.02,0.02);
-  }
-
-  // autoConnect optional: if enabled, connect automatically when in range
-  if (autoConnect){
-    for (const m of modules){
-      if (!m.connected && m.type === 'good'){
-        const d = Math.hypot(m.x - player.x, m.y - player.y);
-        if (d < CONNECT_DIST+6) tryConnect(m);
+    // Save score
+    async function saveScore() {
+      if (!game.username || game.xp <= game.highScore) return;
+      try {
+        await window.supabase
+          .from('symbiotic_scores')
+          .insert([{ username: game.username, xp: game.xp, wave: game.wave }]);
+        
+        game.highScore = game.xp;
+        document.getElementById('highScore').textContent = game.highScore;
+      } catch (error) {
+        console.error('Error saving score:', error);
       }
     }
-  }
 
-  // collisions
-  checkCollision();
+    // Start wave
+    window.startWave = function() {
+      if (game.running) return;
+      game.running = true;
+      game.wave++;
+      document.getElementById('wave').textContent = game.wave;
+      document.getElementById('startBtn').disabled = true;
+      document.getElementById('startBtn').textContent = 'Playing...';
+      
+      game.spawnInterval = Math.max(400, 900 - game.wave * 60);
+      game.modulesThisWave = 0;
+      game.waveTarget = 10 + Math.floor(game.wave * 1.4);
+      game.spawnTimer = 0;
+    };
 
-  // clean modules that drift far away (keep array tidy)
-  for (let i=modules.length-1;i>=0;i--){
-    const m = modules[i];
-    if (m.x < -80 || m.x > canvas.width + 80 || m.y < -80 || m.y > canvas.height + 80) modules.splice(i,1);
-  }
+    // Toggle auto-connect
+    window.toggleAutoConnect = function() {
+      game.autoConnect = !game.autoConnect;
+      const btn = document.getElementById('autoConnectBtn');
+      btn.textContent = game.autoConnect ? 'Auto-Connect: ON' : 'Auto-Connect: OFF';
+    };
 
-  // wave progression: if running and spawned enough and no modules left, end wave
-  if (running && modulesThisWave >= waveTarget && modules.length === 0){
-    running = false;
-    startBtn.disabled = false;
-    xp += 20 + wave*3;
-    updateHud();
-    saveIfHigh();
-  }
+    // Reset game
+    window.resetGame = function() {
+      game.xp = 0;
+      game.wave = 0;
+      game.running = false;
+      game.modules = [];
+      game.moduleId = 0;
+      game.player = { x: 100, y: 100, r: 14, speed: 240 };
+      
+      document.getElementById('xp').textContent = '0';
+      document.getElementById('wave').textContent = '0';
+      document.getElementById('startBtn').disabled = false;
+      document.getElementById('startBtn').textContent = 'Start Game';
+      document.getElementById('gameOverModal').classList.remove('active');
+    };
 
-  draw();
-  requestAnimationFrame(loop);
-}
+    // Spawn module
+    function spawnModule() {
+      const side = Math.random();
+      let x, y, vx, vy;
 
-let spawnClock = performance.now();
-requestAnimationFrame(loop);
+      if (side < 0.25) {
+        x = -20;
+        y = Math.random() * (game.canvas.height - 80) + 40;
+        vx = Math.random() * 0.8 + 0.4;
+        vy = Math.random() * 0.6 - 0.3;
+      } else if (side < 0.5) {
+        x = Math.random() * (game.canvas.width - 80) + 40;
+        y = -20;
+        vx = Math.random() - 0.5;
+        vy = Math.random() * 0.8 + 0.4;
+      } else if (side < 0.75) {
+        x = game.canvas.width + 20;
+        y = Math.random() * (game.canvas.height - 80) + 40;
+        vx = -(Math.random() * 0.8 + 0.4);
+        vy = Math.random() * 0.6 - 0.3;
+      } else {
+        x = Math.random() * (game.canvas.width - 80) + 40;
+        y = game.canvas.height + 20;
+        vx = Math.random() - 0.5;
+        vy = -(Math.random() * 0.8 + 0.4);
+      }
 
-/* -------------------------
-   drawing
-   ------------------------- */
-function draw(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  // background stars
-  ctx.fillStyle = '#031515';
-  ctx.fillRect(0,0,canvas.width,canvas.height);
+      const badChance = Math.min(0.08 + game.wave * 0.02 + Math.random() * 0.1, 0.6);
+      const type = Math.random() < badChance ? 'bad' : 'good';
 
-  // subtle grid lines
-  ctx.strokeStyle = 'rgba(0,255,136,0.03)';
-  ctx.lineWidth = 1;
-  for (let gx=0; gx<canvas.width; gx += 48){
-    ctx.beginPath(); ctx.moveTo(gx,0); ctx.lineTo(gx,canvas.height); ctx.stroke();
-  }
-  for (let gy=0; gy<canvas.height; gy += 48){
-    ctx.beginPath(); ctx.moveTo(0,gy); ctx.lineTo(canvas.width,gy); ctx.stroke();
-  }
+      game.modules.push({
+        id: ++game.moduleId,
+        x, y, vx, vy, type,
+        connected: false
+      });
+      game.modulesThisWave++;
+    }
 
-  // draw modules (behind)
-  for (const m of modules){
-    if (m.connected) continue;
-    // glow
-    ctx.beginPath();
-    ctx.fillStyle = m.type === 'good' ? COLORS.good : COLORS.bad;
-    ctx.shadowColor = ctx.fillStyle;
-    ctx.shadowBlur = 16;
-    ctx.arc(m.x, m.y, 14, 0, Math.PI*2);
-    ctx.fill();
-    ctx.shadowBlur = 0;
-    // inner core
-    ctx.beginPath();
-    ctx.fillStyle = '#01120f';
-    ctx.arc(m.x, m.y, 7, 0, Math.PI*2);
-    ctx.fill();
-    // small symbol
-    ctx.fillStyle = m.type === 'good' ? '#012' : '#220';
-    ctx.font = '12px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(m.type === 'good' ? '+' : '!', m.x, m.y);
-  }
+    // Try to connect to module
+    function tryConnect(module) {
+      if (module.connected) return;
 
-  // draw player core (S-shaped glyph simulated by small curved path)
-  drawS(player.x, player.y, player.r, '#6ef0ff');
+      const dist = Math.hypot(module.x - game.player.x, module.y - game.player.y);
+      if (dist > CONNECT_DIST * 2 && !game.autoConnect) return;
 
-  // draw links (for connected modules, draw fading line)
-  // (we keep simple: draw line from player center to where module was connected recently)
-  // omitted persistent link for simplicity
+      if (module.type === 'good') {
+        module.connected = true;
+        game.xp += XP_GAIN;
+        document.getElementById('xp').textContent = game.xp;
+        
+        setTimeout(() => {
+          const idx = game.modules.findIndex(m => m.id === module.id);
+          if (idx >= 0) game.modules.splice(idx, 1);
+        }, 200);
+      } else {
+        game.xp -= XP_LOSS;
+        document.getElementById('xp').textContent = game.xp;
+        
+        if (game.xp < 0) {
+          endGame();
+          return;
+        }
+        
+        setTimeout(() => {
+          const idx = game.modules.findIndex(m => m.id === module.id);
+          if (idx >= 0) game.modules.splice(idx, 1);
+        }, 200);
+      }
+    }
 
-  // HUD text overlay (canvas retained for background only)
-  xpEl.textContent = xp;
-  waveEl.textContent = wave;
-  highEl.textContent = high;
-  healthEl.textContent = health;
-}
+    // Check collisions
+    function checkCollisions() {
+      for (let i = game.modules.length - 1; i >= 0; i--) {
+        const m = game.modules[i];
+        if (m.type === 'bad') {
+          const dist = Math.hypot(m.x - game.player.x, m.y - game.player.y);
+          if (dist < COLLIDE_DIST + game.player.r) {
+            game.xp -= XP_LOSS;
+            document.getElementById('xp').textContent = game.xp;
+            game.modules.splice(i, 1);
+            
+            if (game.xp < 0) {
+              endGame();
+            }
+          }
+        }
+      }
+    }
 
-/* draw S glyph - small S shaped curve made of two arcs */
-function drawS(cx, cy, r, color){
-  // glow
-  ctx.beginPath();
-  ctx.fillStyle = color;
-  ctx.shadowColor = color;
-  ctx.shadowBlur = 20;
-  ctx.arc(cx - r*0.4, cy - r*0.4, r*0.6, Math.PI*0.2, Math.PI*1.1);
-  ctx.arc(cx + r*0.4, cy + r*0.4, r*0.6, Math.PI*1.2, Math.PI*0.2);
-  ctx.fill();
-  ctx.shadowBlur = 0;
-  // center cut
-  ctx.beginPath();
-  ctx.fillStyle = '#021316';
-  ctx.arc(cx - r*0.4, cy - r*0.4, r*0.25, 0, Math.PI*2);
-  ctx.arc(cx + r*0.4, cy + r*0.4, r*0.25, 0, Math.PI*2);
-  ctx.fill();
-}
+    // End game
+    function endGame() {
+      game.running = false;
+      document.getElementById('finalXP').textContent = game.xp;
+      document.getElementById('finalWave').textContent = game.wave;
+      document.getElementById('gameOverModal').classList.add('active');
+      document.getElementById('startBtn').disabled = false;
+      document.getElementById('startBtn').textContent = 'Start Game';
+      saveScore();
+    }
 
-/* -------------------------
-   HUD & controls wiring
-   ------------------------- */
-function updateHud(){ xpEl.textContent = xp; highEl.textContent = high; waveEl.textContent = wave; healthEl.textContent = health; playerLabel.textContent = `Player: ${username || '—'}`; }
+    // Input handlers
+    function handleKeyDown(e) {
+      game.keys[e.key.toLowerCase()] = true;
+      if (e.code === 'Space') {
+        e.preventDefault();
+        connectNearby();
+      }
+    }
 
-saveBtn.addEventListener('click', ()=>{
-  const v = usernameEl.value.trim();
-  if (!v){ alert('Enter a username'); return; }
-  username = v;
-  localStorage.setItem('symbio_user', username);
-  playerLabel.textContent = `Player: ${username}`;
-  saveBtn.textContent = 'Saved';
-  setTimeout(()=> saveBtn.textContent = 'Save',800);
-  loadHigh();
-});
+    function handleKeyUp(e) {
+      game.keys[e.key.toLowerCase()] = false;
+    }
 
-startBtn.addEventListener('click', ()=> { startWave(); startBtn.disabled = true; });
+    function handleCanvasClick(e) {
+      const rect = game.canvas.getBoundingClientRect();
+      const mx = (e.clientX - rect.left) * (game.canvas.width / rect.width);
+      const my = (e.clientY - rect.top) * (game.canvas.height / rect.height);
 
-autoConnectBtn.addEventListener('click', ()=>{
-  autoConnect = !autoConnect;
-  autoConnectBtn.textContent = autoConnect ? 'Auto-Connect: ON' : 'Auto-Connect: OFF';
-});
+      let nearest = null;
+      let bestDist = 9999;
 
-/* keyboard friendly: space to connect */
-window.addEventListener('keydown', (e)=>{ if (e.code === 'Space'){ e.preventDefault(); connectNearby(); } });
+      for (const m of game.modules) {
+        const d = Math.hypot(m.x - mx, m.y - my);
+        if (d < bestDist) {
+          bestDist = d;
+          nearest = m;
+        }
+      }
 
-retryBtn.addEventListener('click', ()=>{
-  overlayGameOver.style.display = 'none';
-  resetGame();
-});
-playMoreBtn.addEventListener('click', ()=>{
-  overlayWin.style.display = 'none';
-  resetGame();
-});
+      if (nearest && bestDist < 70) {
+        tryConnect(nearest);
+      }
+    }
 
-/* reset & end */
-function endGame(){
-  running = false;
-  overlayGameOver.style.display = 'flex';
-  document.getElementById('goText').textContent = `XP: ${xp} — Wave ${wave}`;
-  saveIfHigh();
-}
-function resetGame(){
-  xp = 0; wave = 0; health = 3;
-  modules.length = 0;
-  moduleId = 0;
-  running = false;
-  updateHud();
-  fitCanvas();
-}
+    function connectNearby() {
+      let nearest = null;
+      let bestDist = 9999;
 
-/* initial state */
-updateHud();
-loadHigh();
+      for (const m of game.modules) {
+        if (m.connected) continue;
+        const d = Math.hypot(m.x - game.player.x, m.y - game.player.y);
+        if (d < bestDist) {
+          bestDist = d;
+          nearest = m;
+        }
+      }
 
-/* small audio utility */
-const AudioCtx = window.AudioContext ? new AudioContext() : null;
-function beep(freq, dur=0.06, vol=0.04){
-  if (!AudioCtx) return;
-  const o = AudioCtx.createOscillator();
-  const g = AudioCtx.createGain();
-  o.type = 'sine';
-  o.frequency.value = freq;
-  g.gain.value = vol;
-  o.connect(g); g.connect(AudioCtx.destination);
-  o.start();
-  o.stop(AudioCtx.currentTime + dur);
-}
+      if (nearest && bestDist <= CONNECT_DIST * 2) {
+        tryConnect(nearest);
+      }
+    }
 
-/* spawn clock using a reliable timer */
-setInterval(()=>{
-  if (!running) return;
-  if (modulesThisWave < waveTarget){
-    spawnModule();
-    spawnClock = performance.now();
-  }
-}, 600);
+    // Game loop
+    function gameLoop(now) {
+      const dt = (now - game.lastTime) / 1000;
+      game.lastTime = now;
 
-/* because we increment spawnClock and spawnInterval earlier with messy logic, ensure spawnClock exists */
-let spawnClock = performance.now();
+      // Move player
+      let vx = 0, vy = 0;
+      if (game.keys['arrowleft'] || game.keys['a']) vx = -1;
+      if (game.keys['arrowright'] || game.keys['d']) vx = 1;
+      if (game.keys['arrowup'] || game.keys['w']) vy = -1;
+      if (game.keys['arrowdown'] || game.keys['s']) vy = 1;
 
-</script>
+      if (vx || vy) {
+        const len = Math.hypot(vx, vy) || 1;
+        game.player.x += (vx / len) * game.player.speed * dt;
+        game.player.y += (vy / len) * game.player.speed * dt;
+        game.player.x = Math.max(20, Math.min(game.canvas.width - 20, game.player.x));
+        game.player.y = Math.max(20, Math.min(game.canvas.height - 20, game.player.y));
+      }
+
+      // Spawn modules
+      if (game.running && game.modulesThisWave < game.waveTarget) {
+        game.spawnTimer += dt * 1000;
+        if (game.spawnTimer >= game.spawnInterval) {
+          spawnModule();
+          game.spawnTimer = 0;
+        }
+      }
+
+      // Update modules
+      for (const m of game.modules) {
+        m.x += m.vx * (50 + game.wave * 6) * dt;
+        m.y += m.vy * (50 + game.wave * 4) * dt;
+        m.vx += (Math.random() - 0.5) * 0.04;
+        m.vy += (Math.random() - 0.5) * 0.04;
+      }
+
+      // Auto-connect
+      if (game.autoConnect) {
+        for (const m of game.modules) {
+          if (!m.connected && m.type === 'good') {
+            const d = Math.hypot(m.x - game.player.x, m.y - game.player.y);
+            if (d < CONNECT_DIST + 6) tryConnect(m);
+          }
+        }
+      }
+
+      // Check collisions
+      checkCollisions();
+
+      // Clean up distant modules
+      game.modules = game.modules.filter(m =>
+        m.x > -80 && m.x < game.canvas.width + 80 &&
+        m.y > -80 && m.y < game.canvas.height + 80
+      );
+
+      // Check wave completion
+      if (game.running && game.modulesThisWave >= game.waveTarget && game.modules.length === 0) {
+        game.running = false;
+        game.xp += 20 + game.wave * 3;
+        document.getElementById('xp').textContent = game.xp;
+        document.getElementById('startBtn').disabled = false;
+        document.getElementById('startBtn').textContent = 'Next Wave';
+        saveScore();
+      }
+
+      // Draw
+      draw();
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    // Draw game
+    function draw() {
+      const ctx = game.ctx;
+      const canvas = game.canvas;
+
+      // Background
+      ctx.fillStyle = COLORS.bg;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Grid
+      ctx.strokeStyle = 'rgba(0, 255, 136, 0.06)';
+      ctx.lineWidth = 1;
+      for (let x = 0; x < canvas.width; x += 40) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+      }
+      for (let y = 0; y < canvas.height; y += 40) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+      }
+
+      // Draw modules
+      for (const m of game.modules) {
+        if (m.connected) continue;
+
+        // Outer glow
+        ctx.beginPath();
+        ctx.fillStyle = m.type === 'good' ? COLORS.good : COLORS.bad;
+        ctx.shadowColor = ctx.fillStyle;
+        ctx.shadowBlur = 20;
+        ctx.arc(m.x, m.y, 16, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Inner circle
+        ctx.beginPath();
+        ctx.fillStyle = '#000';
+        ctx.arc(m.x, m.y, 8, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Symbol
+        ctx.fillStyle = m.type === 'good' ? COLORS.good : COLORS.bad;
+        ctx.font = 'bold 16px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(m.type === 'good' ? '+' : '!', m.x, m.y);
+      }
+
+      // Draw player core
+      const p = game.player;
+      ctx.beginPath();
+      ctx.fillStyle = COLORS.core;
+      ctx.shadowColor = COLORS.core;
+      ctx.shadowBlur = 30;
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Inner core
+      ctx.beginPath();
+      ctx.fillStyle = '#000';
+      ctx.arc(p.x, p.y, p.r * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  </script>
 </body>
 </html>
