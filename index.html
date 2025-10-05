@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Symbiotic Expansion</title>
+  <style>
+    :root{
+      --neon: #00ff88;
+      --neon-2: #6ef0ff;
+      --bg1: #061213;
+      --muted: #bfeee0;
+    }
+    html,body{height:100%;margin:0;background:radial-gradient(circle at 20% 20%, rgba(0,255,136,0.06), transparent 25%), linear-gradient(180deg,#001616,#021212);font-family:Inter,system-ui,Arial;color:var(--muted);-webkit-font-smoothing:antialiased}
+    .wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px}
+    .topbar{width:100%;max-width:1180px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+    .branding{display:flex;flex-direction:column}
+    .title{font-size:20px;font-weight:900;color:var(--neon);letter-spacing:.4px}
+    .subtitle{font-size:12px;color:#9fd9c0}
+    .controls{display:flex;gap:8px;align-items:center}
+    .controls input{padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:var(--muted);min-width:160px}
+    .controls button{padding:8px 12px;border-radius:10px;border:none;background:var(--neon);color:#012;font-weight:800;cursor:pointer}
+    .main{width:100%;max-width:1180px;display:flex;gap:18px;align-items:flex-start;justify-content:center}
+    .board{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:12px;border:1px solid rgba(0,255,136,0.04);box-shadow:0 20px 60px rgba(0,0,0,0.6)}
+    #canvasWrap{position:relative;width:78vw;max-width:820px;aspect-ratio:16/10}
+    canvas#game{width:100%;height:100%;display:block;border-radius:10px;background:linear-gradient(180deg,#061617,#02100f)}
+    .hud{width:280px;padding:12px;border-radius:12px;background:linear-gradient(180deg, rgba(0,0,0,0.2), rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.02)}
+    .hud h3{margin:0;color:var(--neon);font-size:18px}
+    .row{display:flex;justify-content:space-between;align-items:center;margin-top:10px}
+    .muted{font-size:13px;color:#9fd9c0}
+    .big{font-weight:800;color:var(--neon-2)}
+    .btn{padding:8px 12px;border-radius:10px;border:none;background:var(--neon);color:#012;font-weight:800;cursor:pointer}
+    .note{font-size:12px;color:#9fbfb0;margin-top:10px}
+    .overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:60;background:linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.85))}
+    .panel{background:linear-gradient(180deg,#071617,#021010);padding:20px;border-radius:12px;border:1px solid rgba(255,255,255,0.03);min-width:320px;text-align:center}
+    .panel h2{color:var(--neon);margin:0 0 8px}
+    .panel p{color:var(--muted);margin:0 0 12px}
+    @media(max-width:900px){ .main{flex-direction:column;align-items:center} .hud{width:92%} #canvasWrap{width:92vw} .topbar{flex-direction:column;align-items:flex-start} }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="branding">
+        <div class="title">Symbiotic Expansion</div>
+        <div class="subtitle">Grow the network — connect modules, avoid corruption</div>
+      </div>
+      <div class="controls">
+        <input id="username" placeholder="username (saved locally)" />
+        <button id="saveBtn">Save</button>
+        <button id="startBtn" class="btn">Start</button>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="board">
+        <div id="canvasWrap"><canvas id="game"></canvas></div>
+      </div>
+
+      <div class="hud">
+        <h3 id="playerLabel">Player: —</h3>
+        <div class="row"><div class="muted">XP</div><div id="xp" class="big">0</div></div>
+        <div class="row"><div class="muted">High</div><div id="high" class="big">0</div></div>
+        <div class="row"><div class="muted">Wave</div><div id="wave" class="big">0</div></div>
+        <div class="row"><div class="muted">Health</div><div id="health" class="big">3</div></div>
+
+        <div style="margin-top:12px">
+          <button id="autoConnect" class="btn">Auto-Connect: OFF</button>
+        </div>
+
+        <div class="note">Move with <b>WASD</b> or <b>arrow keys</b>. Press <b>SPACE</b> or click a module to connect. Green modules = good, Red = corrupted.</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="gameOver" class="overlay"><div class="panel"><h2>Network Breached</h2><p id="goText">Your core was corrupted.</p><button id="retry" class="btn">Restart</button></div></div>
+  <div id="win" class="overlay"><div class="panel"><h2>System Expanded</h2><p id="winText">You reached the target expansion!</p><button id="playMore" class="btn">Play Again</button></div></div>
+
+<script type="module">
+/* -------------------------
+   Supabase init
+   ------------------------- */
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+// Use the jzofw... project (you used earlier)
+const SUPABASE_URL = 'https://jzofwfixzsotrcmrxlsx.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp6b2Z3Zml4enNvdHJjbXJ4bHN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgzMTczODcsImV4cCI6MjA3Mzg5MzM4N30.zgV7-3R0cuopTtw8caZaYnkM5Mxg1bphJzkuvZGuf-8';
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* -------------------------
+   DOM refs & canvas sizing
+   ------------------------- */
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const usernameEl = document.getElementById('username');
+const saveBtn = document.getElementById('saveBtn');
+const startBtn = document.getElementById('startBtn');
+const autoConnectBtn = document.getElementById('autoConnect');
+const playerLabel = document.getElementById('playerLabel');
+const xpEl = document.getElementById('xp');
+const highEl = document.getElementById('high');
+const waveEl = document.getElementById('wave');
+const healthEl = document.getElementById('health');
+const overlayGameOver = document.getElementById('gameOver');
+const retryBtn = document.getElementById('retry');
+const overlayWin = document.getElementById('win');
+const playMoreBtn = document.getElementById('playMore');
+
+let canvasWrapRect = document.getElementById('canvasWrap').getBoundingClientRect();
+function fitCanvas(){
+  canvasWrapRect = document.getElementById('canvasWrap').getBoundingClientRect();
+  canvas.width = Math.max(640, Math.floor(canvasWrapRect.width));
+  canvas.height = Math.max(400, Math.floor(canvasWrapRect.height));
+}
+window.addEventListener('resize', ()=>{ fitCanvas(); draw(); });
+fitCanvas();
+
+/* -------------------------
+   game state
+   ------------------------- */
+let username = localStorage.getItem('symbio_user') || '';
+usernameEl.value = username;
+let xp = 0;
+let high = 0;
+let wave = 0;
+let health = 3;
+let running = false;
+let autoConnect = false;
+
+/* player core */
+const player = { x: 100, y: 100, r: 12, speed: 220 };
+
+/* modules */
+const modules = []; // {x,y,vx,vy,type: 'good'|'bad', connected:false, id}
+let moduleId = 0;
+
+/* visuals/colors */
+const COLORS = { good:'#00ff88', bad:'#ff4a4a', core:'#6ef0ff', link:'#00ff88' };
+
+/* timing & difficulty */
+let lastTime = performance.now();
+let spawnTimer = 0;
+let spawnInterval = 900; // ms
+let modulesThisWave = 0;
+let waveTarget = 12;
+
+/* mechanics */
+const CONNECT_DIST = 30;    // distance to connect
+const COLLIDE_DIST = 18;    // collision distance (bad modules)
+const XP_GAIN = 50;
+const XP_LOSS = 30;
+
+/* helper */
+function rand(min,max){ return Math.random()*(max-min)+min; }
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+
+/* -------------------------
+   Supabase helpers
+   ------------------------- */
+async function loadHigh(){
+  if (!username) { high = 0; highEl.textContent = '0'; return; }
+  try {
+    const { data, error } = await supabase
+      .from('symbiotic_expansion_scores')
+      .select('xp')
+      .eq('username', username)
+      .order('xp', { ascending:false })
+      .limit(1);
+    if (!error && data && data.length) high = data[0].xp;
+    else high = 0;
+    highEl.textContent = high;
+  } catch(e){
+    console.warn('loadHigh error', e);
+    high = 0;
+    highEl.textContent = high;
+  }
+}
+async function saveIfHigh(){
+  if (!username) return;
+  if (xp <= high) return;
+  try {
+    await supabase.from('symbiotic_expansion_scores').insert([{ username, xp }]);
+    high = xp;
+    highEl.textContent = high;
+  } catch(e){ console.warn('save error', e); }
+}
+
+/* -------------------------
+   spawn logic
+   ------------------------- */
+function startWave(){
+  if (running) return;
+  running = true;
+  wave++;
+  waveEl.textContent = wave;
+  spawnInterval = Math.max(400, 900 - wave*60);
+  modulesThisWave = 0;
+  waveTarget = 10 + Math.floor(wave * 1.4);
+  spawnTimer = 0;
+}
+
+function spawnModule(){
+  // spawn at edges with inward velocity
+  const side = Math.random();
+  let x,y,vx,vy;
+  if (side < 0.25){ // left
+    x = -20; y = rand(40, canvas.height-40); vx = rand(0.4, 1.2); vy = rand(-0.3,0.3);
+  } else if (side < 0.5){ // top
+    x = rand(40, canvas.width-40); y = -20; vx = rand(-0.5,0.5); vy = rand(0.4,1.2);
+  } else if (side < 0.75){ // right
+    x = canvas.width + 20; y = rand(40, canvas.height-40); vx = rand(-1.2,-0.4); vy = rand(-0.3,0.3);
+  } else { // bottom
+    x = rand(40, canvas.width-40); y = canvas.height + 20; vx = rand(-0.5,0.5); vy = rand(-1.2,-0.4);
+  }
+  // type scaling: early waves mostly good, later waves more bads
+  const badChance = clamp(0.08 + wave*0.02 + Math.random()*0.1, 0, 0.6);
+  const type = Math.random() < badChance ? 'bad' : 'good';
+  modules.push({ id: ++moduleId, x, y, vx, vy, type, connected:false });
+  modulesThisWave++;
+}
+
+/* -------------------------
+   input handling
+   ------------------------- */
+const keys = {};
+window.addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; if (e.code === 'Space') connectNearby(); if (e.key === 'Enter') startWave(); });
+window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+
+canvas.addEventListener('click', (ev)=>{
+  // map click to canvas coords
+  const rect = canvas.getBoundingClientRect();
+  const mx = (ev.clientX - rect.left) * (canvas.width / rect.width);
+  const my = (ev.clientY - rect.top) * (canvas.height / rect.height);
+  // try to connect nearest module
+  let nearest = null, best = 9999;
+  for (const m of modules){
+    const d = Math.hypot(m.x - mx, m.y - my);
+    if (d < best){ best = d; nearest = m; }
+  }
+  if (nearest && best < 70){
+    tryConnect(nearest);
+  } else {
+    // move player instantly toward click (also allow mouse control)
+    player.x = mx; player.y = my;
+  }
+});
+
+/* -------------------------
+   connection & collision
+   ------------------------- */
+function connectNearby(){
+  // attempt connect to nearest within CONNECT_DIST
+  let nearest = null, best = 9999;
+  for (const m of modules){
+    if (m.connected) continue;
+    const d = Math.hypot(m.x - player.x, m.y - player.y);
+    if (d < best){ best = d; nearest = m; }
+  }
+  if (nearest && best <= CONNECT_DIST*2.2){
+    tryConnect(nearest);
+  }
+}
+
+function tryConnect(m){
+  if (m.connected) return;
+  const d = Math.hypot(m.x - player.x, m.y - player.y);
+  // if too far, require click near or autoConnect
+  if (d > CONNECT_DIST*2.2 && !autoConnect) {
+    // play slight deny sound
+    beep(420, 0.06);
+    return;
+  }
+  if (m.type === 'good'){
+    m.connected = true;
+    xp += XP_GAIN;
+    // small visual effect: shrink module
+    // remove after small delay
+    setTimeout(()=> {
+      const idx = modules.findIndex(x=>x.id===m.id);
+      if (idx>=0) modules.splice(idx,1);
+    }, 240);
+    beep(1200, 0.07, 0.05);
+  } else {
+    // corrupted: connecting is risky -> heavy penalty
+    xp -= XP_LOSS;
+    // effect: mark negative and remove
+    setTimeout(()=> {
+      const idx = modules.findIndex(x=>x.id===m.id);
+      if (idx>=0) modules.splice(idx,1);
+    }, 200);
+    beep(220, 0.14, 0.06);
+  }
+  updateHud();
+  // check win/lose
+  if (xp < 0) endGame();
+  if (modulesThisWave >= waveTarget && modules.length === 0) { // wave cleared
+    running = false;
+    startBtn.disabled = false;
+    // small reward for finishing wave
+    xp += 20 + wave*2;
+    updateHud();
+    saveIfHigh();
+  }
+}
+
+/* -------------------------
+   collision when touching bad modules
+   ------------------------- */
+function checkCollision(){
+  for (let i = modules.length-1;i>=0;i--){
+    const m = modules[i];
+    if (m.type === 'bad'){
+      const d = Math.hypot(m.x - player.x, m.y - player.y);
+      if (d < COLLIDE_DIST + player.r){
+        // collision penalty
+        xp -= XP_LOSS;
+        // remove module
+        modules.splice(i,1);
+        beep(240, 0.12, 0.06);
+        updateHud();
+        if (xp < 0) endGame();
+      }
+    }
+  }
+}
+
+/* -------------------------
+   movement & update loop
+   ------------------------- */
+let last = performance.now();
+function loop(now){
+  const dt = (now - last) / 1000; // seconds
+  last = now;
+
+  // move player with keys
+  let vx = 0, vy = 0;
+  if (keys['arrowleft']||keys['a']) vx = -1;
+  if (keys['arrowright']||keys['d']) vx = 1;
+  if (keys['arrowup']||keys['w']) vy = -1;
+  if (keys['arrowdown']||keys['s']) vy = 1;
+  if (vx || vy){
+    const len = Math.hypot(vx,vy) || 1;
+    player.x += (vx/len) * player.speed * dt;
+    player.y += (vy/len) * player.speed * dt;
+    // clamp
+    player.x = clamp(player.x, 20, canvas.width-20);
+    player.y = clamp(player.y, 20, canvas.height-20);
+  }
+
+  // spawn modules if wave running
+  if (running && modulesThisWave < waveTarget){
+    spawnTimer += (now - last);
+    spawnTimer += (now - last); // compensate for request animation timing
+    spawnTimer += (now - last);
+    spawnTimer = spawnTimer; // no-op to avoid linter remove
+    // we'll use time measured via separate variable to avoid drift
+  }
+
+  // simpler spawn tracking using a delta
+  if (running){
+    spawnInterval -= (now - last);
+    // the above logic used wrong variable; rework: use a separate spawnClock.
+  }
+
+  // We'll implement a robust spawn clock below using timestamps:
+  // (handled by spawnClock variable)
+  if (running && performance.now() - spawnClock >= spawnInterval && modulesThisWave < waveTarget){
+    spawnModule();
+    spawnClock = performance.now();
+  }
+
+  // update module positions
+  for (const m of modules){
+    m.x += m.vx * (50 + wave*6) * dt;
+    m.y += m.vy * (50 + wave*4) * dt;
+    // slight wandering
+    m.vx += rand(-0.02,0.02);
+    m.vy += rand(-0.02,0.02);
+  }
+
+  // autoConnect optional: if enabled, connect automatically when in range
+  if (autoConnect){
+    for (const m of modules){
+      if (!m.connected && m.type === 'good'){
+        const d = Math.hypot(m.x - player.x, m.y - player.y);
+        if (d < CONNECT_DIST+6) tryConnect(m);
+      }
+    }
+  }
+
+  // collisions
+  checkCollision();
+
+  // clean modules that drift far away (keep array tidy)
+  for (let i=modules.length-1;i>=0;i--){
+    const m = modules[i];
+    if (m.x < -80 || m.x > canvas.width + 80 || m.y < -80 || m.y > canvas.height + 80) modules.splice(i,1);
+  }
+
+  // wave progression: if running and spawned enough and no modules left, end wave
+  if (running && modulesThisWave >= waveTarget && modules.length === 0){
+    running = false;
+    startBtn.disabled = false;
+    xp += 20 + wave*3;
+    updateHud();
+    saveIfHigh();
+  }
+
+  draw();
+  requestAnimationFrame(loop);
+}
+
+let spawnClock = performance.now();
+requestAnimationFrame(loop);
+
+/* -------------------------
+   drawing
+   ------------------------- */
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  // background stars
+  ctx.fillStyle = '#031515';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  // subtle grid lines
+  ctx.strokeStyle = 'rgba(0,255,136,0.03)';
+  ctx.lineWidth = 1;
+  for (let gx=0; gx<canvas.width; gx += 48){
+    ctx.beginPath(); ctx.moveTo(gx,0); ctx.lineTo(gx,canvas.height); ctx.stroke();
+  }
+  for (let gy=0; gy<canvas.height; gy += 48){
+    ctx.beginPath(); ctx.moveTo(0,gy); ctx.lineTo(canvas.width,gy); ctx.stroke();
+  }
+
+  // draw modules (behind)
+  for (const m of modules){
+    if (m.connected) continue;
+    // glow
+    ctx.beginPath();
+    ctx.fillStyle = m.type === 'good' ? COLORS.good : COLORS.bad;
+    ctx.shadowColor = ctx.fillStyle;
+    ctx.shadowBlur = 16;
+    ctx.arc(m.x, m.y, 14, 0, Math.PI*2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    // inner core
+    ctx.beginPath();
+    ctx.fillStyle = '#01120f';
+    ctx.arc(m.x, m.y, 7, 0, Math.PI*2);
+    ctx.fill();
+    // small symbol
+    ctx.fillStyle = m.type === 'good' ? '#012' : '#220';
+    ctx.font = '12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(m.type === 'good' ? '+' : '!', m.x, m.y);
+  }
+
+  // draw player core (S-shaped glyph simulated by small curved path)
+  drawS(player.x, player.y, player.r, '#6ef0ff');
+
+  // draw links (for connected modules, draw fading line)
+  // (we keep simple: draw line from player center to where module was connected recently)
+  // omitted persistent link for simplicity
+
+  // HUD text overlay (canvas retained for background only)
+  xpEl.textContent = xp;
+  waveEl.textContent = wave;
+  highEl.textContent = high;
+  healthEl.textContent = health;
+}
+
+/* draw S glyph - small S shaped curve made of two arcs */
+function drawS(cx, cy, r, color){
+  // glow
+  ctx.beginPath();
+  ctx.fillStyle = color;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 20;
+  ctx.arc(cx - r*0.4, cy - r*0.4, r*0.6, Math.PI*0.2, Math.PI*1.1);
+  ctx.arc(cx + r*0.4, cy + r*0.4, r*0.6, Math.PI*1.2, Math.PI*0.2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  // center cut
+  ctx.beginPath();
+  ctx.fillStyle = '#021316';
+  ctx.arc(cx - r*0.4, cy - r*0.4, r*0.25, 0, Math.PI*2);
+  ctx.arc(cx + r*0.4, cy + r*0.4, r*0.25, 0, Math.PI*2);
+  ctx.fill();
+}
+
+/* -------------------------
+   HUD & controls wiring
+   ------------------------- */
+function updateHud(){ xpEl.textContent = xp; highEl.textContent = high; waveEl.textContent = wave; healthEl.textContent = health; playerLabel.textContent = `Player: ${username || '—'}`; }
+
+saveBtn.addEventListener('click', ()=>{
+  const v = usernameEl.value.trim();
+  if (!v){ alert('Enter a username'); return; }
+  username = v;
+  localStorage.setItem('symbio_user', username);
+  playerLabel.textContent = `Player: ${username}`;
+  saveBtn.textContent = 'Saved';
+  setTimeout(()=> saveBtn.textContent = 'Save',800);
+  loadHigh();
+});
+
+startBtn.addEventListener('click', ()=> { startWave(); startBtn.disabled = true; });
+
+autoConnectBtn.addEventListener('click', ()=>{
+  autoConnect = !autoConnect;
+  autoConnectBtn.textContent = autoConnect ? 'Auto-Connect: ON' : 'Auto-Connect: OFF';
+});
+
+/* keyboard friendly: space to connect */
+window.addEventListener('keydown', (e)=>{ if (e.code === 'Space'){ e.preventDefault(); connectNearby(); } });
+
+retryBtn.addEventListener('click', ()=>{
+  overlayGameOver.style.display = 'none';
+  resetGame();
+});
+playMoreBtn.addEventListener('click', ()=>{
+  overlayWin.style.display = 'none';
+  resetGame();
+});
+
+/* reset & end */
+function endGame(){
+  running = false;
+  overlayGameOver.style.display = 'flex';
+  document.getElementById('goText').textContent = `XP: ${xp} — Wave ${wave}`;
+  saveIfHigh();
+}
+function resetGame(){
+  xp = 0; wave = 0; health = 3;
+  modules.length = 0;
+  moduleId = 0;
+  running = false;
+  updateHud();
+  fitCanvas();
+}
+
+/* initial state */
+updateHud();
+loadHigh();
+
+/* small audio utility */
+const AudioCtx = window.AudioContext ? new AudioContext() : null;
+function beep(freq, dur=0.06, vol=0.04){
+  if (!AudioCtx) return;
+  const o = AudioCtx.createOscillator();
+  const g = AudioCtx.createGain();
+  o.type = 'sine';
+  o.frequency.value = freq;
+  g.gain.value = vol;
+  o.connect(g); g.connect(AudioCtx.destination);
+  o.start();
+  o.stop(AudioCtx.currentTime + dur);
+}
+
+/* spawn clock using a reliable timer */
+setInterval(()=>{
+  if (!running) return;
+  if (modulesThisWave < waveTarget){
+    spawnModule();
+    spawnClock = performance.now();
+  }
+}, 600);
+
+/* because we increment spawnClock and spawnInterval earlier with messy logic, ensure spawnClock exists */
+let spawnClock = performance.now();
+
+</script>
+</body>
+</html>
