@@ -300,7 +300,9 @@
 
     canvas {
       width: 100%;
-      height: 600px;
+      height: auto;
+      aspect-ratio: 16/9;
+      max-height: 600px;
       display: block;
       background: 
         radial-gradient(circle at 30% 40%, rgba(0, 255, 136, 0.05), transparent 50%),
@@ -534,7 +536,7 @@
       }
 
       canvas {
-        height: 500px;
+        max-height: 500px;
       }
     }
 
@@ -560,7 +562,7 @@
       }
 
       canvas {
-        height: 400px;
+        max-height: 400px;
       }
 
       button {
@@ -698,7 +700,10 @@
       game.ctx = game.canvas.getContext('2d');
       
       resizeCanvas();
-      window.addEventListener('resize', resizeCanvas);
+      window.addEventListener('resize', () => {
+        resizeCanvas();
+        if (!game.running) draw(); // Redraw when resizing if not playing
+      });
       
       // Load username
       if (game.username) {
@@ -712,14 +717,25 @@
       window.addEventListener('keyup', handleKeyUp);
       game.canvas.addEventListener('click', handleCanvasClick);
 
+      // Initial draw
+      draw();
+      
       // Start game loop
       requestAnimationFrame(gameLoop);
     });
 
     function resizeCanvas() {
-      const container = game.canvas.parentElement;
-      game.canvas.width = container.clientWidth - 40;
-      game.canvas.height = 600;
+      const rect = game.canvas.getBoundingClientRect();
+      game.canvas.width = rect.width;
+      game.canvas.height = rect.height;
+      
+      // Reset player position if out of bounds
+      if (game.player.x > game.canvas.width - 20) {
+        game.player.x = game.canvas.width / 2;
+      }
+      if (game.player.y > game.canvas.height - 20) {
+        game.player.y = game.canvas.height / 2;
+      }
     }
 
     // Save username
